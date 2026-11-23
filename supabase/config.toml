@@ -1,0 +1,14 @@
+# Configurazione per la Supabase CLI (sviluppo locale e deploy).
+project_id = "unitune"
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:4173", "https://*.vercel.app", "https://*.netlify.app"]
+
+[auth.email]
+enable_signup = true
+
+[functions.youtube]
+# La funzione accetta solo richieste con un JWT Supabase valido:
+# solo utenti loggati possono consumare quota YouTube.
+verify_jwt = true
