@@ -93,7 +93,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { display_name: displayName.trim() }, emailRedirectTo: window.location.origin },
+      options: { data: { display_name: displayName.trim() }, emailRedirectTo: `${window.location.origin}/` },
     })
     throwIf(error)
     return data.session ? 'signedIn' : 'confirmEmail'
@@ -103,7 +103,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     if (!supabase) return
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/` },
     })
     throwIf(error)
   },

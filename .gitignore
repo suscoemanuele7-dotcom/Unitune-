@@ -5,6 +5,9 @@ dev-dist
 .env
 .env.*
 !.env.example
+# Configurazioni pubbliche (nessun segreto):
+!.env.production
+!.env.e2e
 .DS_Store
 supabase/.temp
 test-results

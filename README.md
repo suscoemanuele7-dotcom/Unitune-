@@ -186,8 +186,8 @@ e2e/                      test end-to-end (Playwright)
 ## 5. Configurare Supabase
 
 1. Crea un progetto gratuito su https://supabase.com.
-2. Applica lo schema, in uno dei due modi:
-   - **SQL Editor:** incolla ed esegui `supabase/migrations/20261122000000_init.sql`;
+2. Applica lo schema (tre migrazioni, in ordine: schema + RLS, permessi espliciti, revoca delle funzioni trigger), in uno dei due modi:
+   - **SQL Editor:** incolla ed esegui, in ordine, i file di `supabase/migrations/`;
    - **CLI:**
      ```bash
      npx supabase login
@@ -202,6 +202,8 @@ e2e/                      test end-to-end (Playwright)
    ```bash
    cp .env.example .env
    ```
+
+> I progetti Supabase recenti **non concedono più in automatico** i permessi sulle nuove tabelle ai ruoli dell'API: per questo la seconda migrazione (`*_explicit_grants.sql`) concede, tabella per tabella, solo le operazioni necessarie. Il test locale del database riproduce questo comportamento.
 
 La anon key è pubblica per design: la sicurezza è nelle **policy RLS**, verificate da `npm run test:db`. La *service_role* key **non** va mai nel client: la usa solo la Edge Function, che la riceve automaticamente da Supabase.
 
@@ -271,7 +273,7 @@ Entrambi i servizi sono già configurati: rewrite SPA, `sw.js` mai in cache, ass
 ### Vercel
 1. Carica il progetto su un repository Git (GitHub/GitLab).
 2. https://vercel.com/new → importa il repository. Il framework (Vite) viene rilevato e `vercel.json` è già incluso.
-3. **Environment Variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_USE_MOCKS=false`.
+3. **Environment Variables:** non servono: URL e chiave *publishable* di Supabase sono in `.env.production` (valori pubblici per design, già nel repository). Se vuoi puntare a un altro progetto, imposta `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` e `VITE_USE_MOCKS=false` su Vercel: hanno la precedenza sul file.
 4. Deploy. Poi aggiungi l'URL ottenuto in:
    - Supabase → *Authentication → URL Configuration* (Site URL e Redirect URLs);
    - il secret `ALLOWED_ORIGINS` della funzione (sezione 7).
@@ -279,7 +281,7 @@ Entrambi i servizi sono già configurati: rewrite SPA, `sw.js` mai in cache, ass
 ### Netlify
 1. https://app.netlify.com → *Add new site → Import an existing project*.
 2. Build command e cartella sono in `netlify.toml`.
-3. *Site configuration → Environment variables:* le stesse tre variabili.
+3. *Site configuration → Environment variables:* non servono (vedi `.env.production`), salvo per puntare a un altro progetto.
 4. Aggiorna Supabase e `ALLOWED_ORIGINS` con l'URL Netlify.
 
 In alternativa, deploy da terminale:
@@ -328,7 +330,7 @@ Per più quota: [modulo di audit e richiesta di estensione](https://support.goog
 | `npm run test:e2e` | Test end-to-end su telefono simulato (Playwright): onboarding, ricerca su due fonti, player flottante ≥ 200×200, schermo intero, coda, errori di embed, preferiti, playlist, cronologia, brani Audius con `<audio>`, salto dei brani YouTube a schermo spento, Smart Shuffle, quota, offline, service worker. Prima volta: `npx playwright install chromium` |
 | `npm run check` | typecheck + lint + unit test |
 
-Nel test e2e lo script dell'IFrame API è sostituito da un finto player (`e2e/fake-youtube-iframe-api.js`) e le risposte di Audius sono simulate, solo dentro il test, per non dipendere dalla rete. L'app reale carica sempre lo script ufficiale e l'API vera di Audius.
+Il test e2e compila l'app in modalità demo (`vite build --mode e2e`, file `.env.e2e`), così non dipende dal progetto Supabase. Nel test e2e lo script dell'IFrame API è sostituito da un finto player (`e2e/fake-youtube-iframe-api.js`) e le risposte di Audius sono simulate, solo dentro il test, per non dipendere dalla rete. L'app reale carica sempre lo script ufficiale e l'API vera di Audius.
 
 **Verifica manuale consigliata su un telefono reale** (non automatizzabile qui): riproduzione con il player vero, comportamento in background e sulla schermata di blocco (sezione 3), installazione PWA.
 
