@@ -25,7 +25,9 @@ export interface DisplayInfo {
   artist: string
 }
 
-export function displayInfo(track: Pick<Track, 'title' | 'channelTitle'>): DisplayInfo {
+export function displayInfo(track: Pick<Track, 'title' | 'channelTitle'> & { source?: Track['source'] }): DisplayInfo {
+  // Su Audius titolo e artista sono già separati e puliti.
+  if (track.source === 'audius') return { title: track.title, artist: track.channelTitle }
   const cleaned = clean(track.title)
   const parts = cleaned.split(/\s+[-–—]\s+/)
   if (parts.length >= 2) {

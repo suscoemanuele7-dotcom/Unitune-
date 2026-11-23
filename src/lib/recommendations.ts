@@ -13,6 +13,7 @@
  */
 import type { FavoriteEntry, HistoryEntry, Track } from '../types'
 import { displayInfo } from './trackDisplay'
+import { trackKey } from '../../supabase/functions/_shared/contract.ts'
 
 const DAY_MS = 86_400_000
 
@@ -24,6 +25,7 @@ export interface ArtistScore {
 function artistKey(track: Track): string {
   return displayInfo(track).artist.trim().toLowerCase()
 }
+
 
 export function topArtists(history: readonly HistoryEntry[], favorites: readonly FavoriteEntry[], now: number): ArtistScore[] {
   const scores = new Map<string, { name: string; score: number }>()
@@ -45,10 +47,10 @@ export function topArtists(history: readonly HistoryEntry[], favorites: readonly
 }
 
 /** Piccola variazione deterministica per giorno: suggerimenti che cambiano. */
-function dailyJitter(videoId: string, now: number): number {
+function dailyJitter(key: string, now: number): number {
   const day = Math.floor(now / DAY_MS)
   let h = day
-  for (let i = 0; i < videoId.length; i++) h = (h * 31 + videoId.charCodeAt(i)) | 0
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0
   return (Math.abs(h) % 1000) / 1000
 }
 
@@ -64,22 +66,23 @@ export interface RecommendationInput {
 }
 
 export function recommend({ history, favorites, pool, now, limit = 12, recentWindow = 10 }: RecommendationInput): Track[] {
-  const recent = new Set(history.slice(0, recentWindow).map((h) => h.track.videoId))
-  const favoriteIds = new Set(favorites.map((f) => f.track.videoId))
+  const recent = new Set(history.slice(0, recentWindow).map((h) => trackKey(h.track)))
+  const favoriteIds = new Set(favorites.map((f) => trackKey(f.track)))
   const artists = new Map(topArtists(history, favorites, now).map((a) => [a.artist.toLowerCase(), a.score]))
   const coldStart = artists.size === 0
 
   const candidates = new Map<string, Track>()
   for (const track of [...pool, ...favorites.map((f) => f.track), ...history.map((h) => h.track)]) {
-    if (!recent.has(track.videoId) && !candidates.has(track.videoId)) candidates.set(track.videoId, track)
+    const key = trackKey(track)
+    if (!recent.has(key) && !candidates.has(key)) candidates.set(key, track)
   }
 
   return [...candidates.values()]
     .map((track) => {
       const artistScore = artists.get(artistKey(track)) ?? 0
       const score = coldStart
-        ? dailyJitter(track.videoId, now)
-        : artistScore + (favoriteIds.has(track.videoId) ? 0.5 : 0) + dailyJitter(track.videoId, now) * 0.3
+        ? dailyJitter(trackKey(track), now)
+        : artistScore + (favoriteIds.has(trackKey(track)) ? 0.5 : 0) + dailyJitter(trackKey(track), now) * 0.3
       return { track, score }
     })
     .sort((a, b) => b.score - a.score)

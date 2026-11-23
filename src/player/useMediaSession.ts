@@ -2,7 +2,10 @@
  * Media Session API: titolo, artista, artwork e comandi (cuffie, notifiche,
  * schermata di blocco).
  *
- * LIMITE NOTO: l'audio è prodotto dall'iframe di youtube.com (un'origine
+ * Brani Audius: l'audio esce da un nostro <audio>, quindi la Media Session
+ * funziona pienamente (schermata di blocco, cuffie, notifiche).
+ *
+ * LIMITE NOTO per YouTube: l'audio è prodotto dall'iframe di youtube.com (un'origine
  * diversa). Alcuni browser associano la sessione multimediale al frame che
  * suona e mostrano i metadati di YouTube al posto dei nostri, oppure fermano
  * la riproduzione quando l'app va in background. È un comportamento del
@@ -33,15 +36,20 @@ export function useMediaSession(): void {
       return
     }
     const info = displayInfo(track)
-    const base = `https://i.ytimg.com/vi/${track.videoId}`
+    const artwork: MediaImage[] =
+      track.source === 'youtube'
+        ? [
+            { src: `https://i.ytimg.com/vi/${track.id}/mqdefault.jpg`, sizes: '320x180', type: 'image/jpeg' },
+            { src: `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' },
+          ]
+        : track.thumbnailUrl
+          ? [{ src: track.thumbnailUrl, sizes: '480x480', type: 'image/jpeg' }]
+          : []
     navigator.mediaSession.metadata = new MediaMetadata({
       title: info.title,
       artist: info.artist,
-      album: t.appName,
-      artwork: [
-        { src: `${base}/mqdefault.jpg`, sizes: '320x180', type: 'image/jpeg' },
-        { src: `${base}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' },
-      ],
+      album: track.source === 'audius' ? `${t.appName} · Audius` : t.appName,
+      artwork,
     })
   }, [track])
 

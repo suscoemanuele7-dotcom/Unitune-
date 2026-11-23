@@ -58,13 +58,15 @@ describe('parseVideosResponse', () => {
 
   it("mantiene l'ordine della ricerca e mappa i campi", () => {
     const tracks = parseVideosResponse({ items: [item('bbbbbbbbbbb'), item('aaaaaaaaaaa')] }, ['aaaaaaaaaaa', 'bbbbbbbbbbb'])
-    expect(tracks.map((t) => t.videoId)).toEqual(['aaaaaaaaaaa', 'bbbbbbbbbbb'])
+    expect(tracks.map((t) => t.id)).toEqual(['aaaaaaaaaaa', 'bbbbbbbbbbb'])
     expect(tracks[0]).toEqual({
-      videoId: 'aaaaaaaaaaa',
+      source: 'youtube',
+      id: 'aaaaaaaaaaa',
       title: 'T & aaaaaaaaaaa',
       channelTitle: 'Canale',
       thumbnailUrl: 'https://img/aaaaaaaaaaa',
       durationSec: 180,
+      externalUrl: 'https://www.youtube.com/watch?v=aaaaaaaaaaa',
     })
   })
 
@@ -79,7 +81,7 @@ describe('parseVideosResponse', () => {
       },
       ['aaaaaaaaaaa', 'bbbbbbbbbbb', 'ccccccccccc'],
     )
-    expect(tracks.map((t) => t.videoId)).toEqual(['ccccccccccc'])
+    expect(tracks.map((t) => t.id)).toEqual(['ccccccccccc'])
   })
 
   it('usa la thumbnail standard se mancano le thumbnail', () => {

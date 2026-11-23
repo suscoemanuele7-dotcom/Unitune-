@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { ConfirmSheet } from '../components/ConfirmSheet'
 import { EmptyState } from '../components/common'
 import { TrackRow } from '../components/TrackRow'
-import { ChevronLeftIcon, HeartIcon, PlayIcon, ShuffleIcon, TrashIcon } from '../components/icons'
+import { ChevronLeftIcon, HeartIcon, PlayIcon, ShuffleIcon, SparkleIcon, TrashIcon } from '../components/icons'
 import { useLibraryStore } from '../data/useLibraryStore'
 import { errorMessage } from '../lib/errors'
 import { relativeTime } from '../lib/time'
@@ -11,6 +11,7 @@ import { usePlayerStore } from '../player/usePlayerStore'
 import { toast } from '../ui/useToastStore'
 import type { Track } from '../types'
 import { t } from '../i18n'
+import { trackKey } from '../../supabase/functions/_shared/contract.ts'
 
 function BackHeader({ title, gradient, actions }: { title: string; gradient: string; actions?: ReactNode }) {
   const navigate = useNavigate()
@@ -41,10 +42,21 @@ function PlayButtons({ tracks, context }: { tracks: Track[]; context: string }) 
     <div className="flex items-center gap-2">
       <button
         type="button"
+        className="icon-btn text-accent-2 hover:text-accent-2"
+        aria-label={t.playlist.smartShuffle}
+        title={t.playlist.smartShuffle}
+        onClick={() => {
+          playTracks(tracks, Math.floor(Math.random() * tracks.length), { smart: true, context })
+        }}
+      >
+        <SparkleIcon />
+      </button>
+      <button
+        type="button"
         className="icon-btn"
         aria-label={t.playlist.shuffle}
         onClick={() => {
-          playTracks(tracks, Math.floor(Math.random() * tracks.length), { shuffle: true, context })
+          playTracks(tracks, Math.floor(Math.random() * tracks.length), { shuffle: true, smart: false, context })
         }}
       >
         <ShuffleIcon />
@@ -80,7 +92,7 @@ export function FavoritesPage() {
       ) : (
         tracks.map((track, i) => (
           <TrackRow
-            key={track.videoId}
+            key={trackKey(track)}
             track={track}
             onPlay={() => {
               playTracks(tracks, i, { context: t.favorites.title })

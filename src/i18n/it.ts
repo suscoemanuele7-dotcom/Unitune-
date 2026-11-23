@@ -23,7 +23,7 @@ export const it = {
       },
       {
         title: 'Serve la connessione',
-        body: "Senza rete puoi consultare libreria e playlist, ma per ascoltare serve internet. In background il browser potrebbe mettere in pausa la musica.",
+        body: 'Senza rete puoi consultare libreria e playlist, ma per ascoltare serve internet. A schermo spento continuano solo i brani Audius 🌙: quelli YouTube si fermano.',
       },
     ],
     next: 'Avanti',
@@ -88,7 +88,12 @@ export const it = {
     noResults: (q: string) => `Nessun risultato per “${q}”.`,
     loadMore: 'Altri risultati',
     demoNotice:
-      'Catalogo dimostrativo: prova “Queen”, “Ed Sheeran”, “Coldplay”… (oppure “!quota” per simulare un errore).',
+      'YouTube è in modalità demo: catalogo di prova (“Queen”, “Ed Sheeran”, “Coldplay”…; “!quota” simula un errore). Audius invece cerca davvero.',
+    demoShort: 'Catalogo dimostrativo (ricerca YouTube non ancora configurata)',
+    sourcesHint:
+      'Cerchi su due fonti: YouTube (si ascolta con l’app aperta) e Audius 🌙 (artisti indipendenti, si ascolta anche a schermo spento).',
+    filters: { label: 'Fonte', all: 'Tutto', youtube: 'YouTube', audius: 'Audius' },
+    sections: { youtube: 'YouTube', audius: 'Audius' },
     hint: 'Scrivi almeno 2 caratteri. Ogni ricerca consuma quota YouTube: i risultati vengono riutilizzati quando possibile.',
   },
   youtubeErrors: {
@@ -103,6 +108,12 @@ export const it = {
     network: 'Errore di rete. Controlla la connessione e riprova.',
     aborted: '',
     retry: 'Riprova',
+  },
+  audiusErrors: {
+    offline: 'Sei offline: la ricerca richiede la connessione.',
+    network: 'Audius non è raggiungibile. Controlla la connessione e riprova.',
+    unavailable: 'Audius non risponde in questo momento. Riprova più tardi.',
+    aborted: '',
   },
   library: {
     title: 'La tua libreria',
@@ -134,6 +145,7 @@ export const it = {
   playlist: {
     play: 'Riproduci',
     shuffle: 'Casuale',
+    smartShuffle: 'Smart Shuffle: casuale con brani simili',
     share: 'Condividi',
     edit: 'Modifica',
     delete: 'Elimina playlist',
@@ -177,6 +189,7 @@ export const it = {
     playNext: 'Riproduci dopo',
     addToQueue: 'Aggiungi alla coda',
     openOnYouTube: 'Apri su YouTube',
+    openOnAudius: 'Apri su Audius',
     queuedNext: 'Riprodurrai questo brano subito dopo',
     queued: 'Aggiunto alla coda',
     choosePlaylist: 'Aggiungi a playlist',
@@ -190,8 +203,16 @@ export const it = {
     pause: 'Pausa',
     next: 'Successivo',
     previous: 'Precedente',
-    shuffleOn: 'Disattiva riproduzione casuale',
+    shuffleOn: 'Attiva Smart Shuffle',
     shuffleOff: 'Attiva riproduzione casuale',
+    smartOn: 'Disattiva Smart Shuffle',
+    smartNone: 'Smart Shuffle: nessun brano simile trovato per ora.',
+    smartLoading: 'Smart Shuffle: cerco brani simili…',
+    recommended: 'Consigliato da Smart Shuffle',
+    addRecommendedTo: (name: string) => `Aggiungi a “${name}”`,
+    background: 'Si ascolta anche a schermo spento',
+    audiusAttribution: 'Brano su Audius',
+    tapToPlay: 'Il browser ha bloccato l’avvio automatico: premi play.',
     repeatOff: 'Attiva ripetizione',
     repeatAll: 'Ripeti un brano',
     repeatOne: 'Disattiva ripetizione',
@@ -207,7 +228,7 @@ export const it = {
     officialPlayerNote: 'Riproduzione tramite il player ufficiale di YouTube.',
     errors: {
       offline: 'Connessione richiesta per riprodurre.',
-      not_found: 'Video non disponibile (rimosso o privato).',
+      not_found: 'Brano non disponibile (rimosso, privato o non più in streaming).',
       embed_disabled: 'Il creator non consente la riproduzione fuori da YouTube.',
       embed_config: 'Il player non è configurato correttamente (referrer mancante).',
       invalid_param: 'Brano non valido.',
@@ -217,6 +238,7 @@ export const it = {
       skipping: 'Passo al brano successivo…',
       openOnYouTube: 'Apri su YouTube',
     },
+    youtubeBackgroundNote: 'I brani YouTube si fermano a schermo spento: in background passo al prossimo brano Audius.',
   },
   queue: {
     title: 'Coda',
@@ -227,6 +249,7 @@ export const it = {
     remove: 'Rimuovi dalla coda',
     moveUp: 'Sposta su',
     moveDown: 'Sposta giù',
+    smartActive: 'Smart Shuffle attivo: i brani con ✨ sono simili a quelli della lista.',
   },
   common: {
     comingSoon: 'In arrivo',

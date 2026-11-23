@@ -1,0 +1,73 @@
+{
+  "data": [
+    {
+      "id": "95wro",
+      "title": "Stars In The Sky - Lofi Beats",
+      "duration": 71,
+      "genre": "Hip-Hop/Rap",
+      "is_streamable": false,
+      "is_stream_gated": false,
+      "is_delete": false,
+      "is_available": true,
+      "access": {
+        "stream": true,
+        "download": true
+      },
+      "permalink": "/Lofibeat/stars-in-the-sky-lofi-beats-370899",
+      "artwork": {
+        "150x150": "https://audius-content-11.figment.io/content/QmVqupGHZuhjxAgePsiZYyRFkvPUMrzsHMkDVaaGrGUzDK/150x150.jpg",
+        "480x480": "https://audius-content-11.figment.io/content/QmVqupGHZuhjxAgePsiZYyRFkvPUMrzsHMkDVaaGrGUzDK/480x480.jpg"
+      },
+      "user": {
+        "name": "Lofi Beats",
+        "handle": "Lofibeat"
+      }
+    },
+    {
+      "id": "YmJWK",
+      "title": "kirbytape mix vol. 13 - lofi house edition",
+      "duration": 1690,
+      "genre": "Electronic",
+      "is_streamable": true,
+      "is_stream_gated": false,
+      "is_delete": false,
+      "is_available": true,
+      "access": {
+        "stream": true,
+        "download": true
+      },
+      "permalink": "/omgkirbyDAO/kirbytape-mix-vol-13-lofi-house-edition",
+      "artwork": {
+        "150x150": "https://v.monophonic.digital/content/QmPHYjy9G8XDH6izXRJeBU7zD3NEeyuh6vap2cATvkisfu/150x150.jpg",
+        "480x480": "https://v.monophonic.digital/content/QmPHYjy9G8XDH6izXRJeBU7zD3NEeyuh6vap2cATvkisfu/480x480.jpg"
+      },
+      "user": {
+        "name": "omgkirby",
+        "handle": "omgkirbyDAO"
+      }
+    },
+    {
+      "id": "ng9rl",
+      "title": "lofi type beat",
+      "duration": 334,
+      "genre": "Hip-Hop/Rap",
+      "is_streamable": true,
+      "is_stream_gated": false,
+      "is_delete": false,
+      "is_available": true,
+      "access": {
+        "stream": true,
+        "download": true
+      },
+      "permalink": "/bsdu/lofi-type-beat-14815",
+      "artwork": {
+        "150x150": "https://v.monophonic.digital/content/QmVFPdCt5kmR5yhauPAWQdT71FNdYcYJbrvpmqFLLhhRnS/150x150.jpg",
+        "480x480": "https://v.monophonic.digital/content/QmVFPdCt5kmR5yhauPAWQdT71FNdYcYJbrvpmqFLLhhRnS/480x480.jpg"
+      },
+      "user": {
+        "name": "[bsdu]",
+        "handle": "bsdu"
+      }
+    }
+  ]
+}

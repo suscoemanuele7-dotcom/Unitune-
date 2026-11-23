@@ -7,8 +7,8 @@
 --
 -- Tutte le tabelle hanno Row Level Security attiva: con la anon key il
 -- client vede/modifica solo ciò che le policy consentono.
--- Dei video salviamo solo i metadati restituiti dalla YouTube Data API
--- (id, titolo, canale, thumbnail URL, durata): nessun contenuto audio/video.
+-- Dei brani salviamo solo metadati pubblici (fonte, id, titolo, artista,
+-- thumbnail URL, link, durata): nessun contenuto audio/video.
 -- ════════════════════════════════════════════════════════════════════════
 
 -- ── Profili ─────────────────────────────────────────────────────────────
@@ -44,10 +44,22 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- ── Dominio "video YouTube" ─────────────────────────────────────────────
--- Gli ID video di YouTube sono 11 caratteri [A-Za-z0-9_-].
-create domain public.youtube_video_id as text
-  check (value ~ '^[A-Za-z0-9_-]{11}$');
+-- ── Brani: fonte + ID ───────────────────────────────────────────────────
+-- Un brano è identificato da (source, track_id):
+--   youtube → ID video di 11 caratteri [A-Za-z0-9_-]
+--   audius  → ID traccia alfanumerico (es. "V66vyPP")
+create function public.is_valid_track(p_source text, p_track_id text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select case p_source
+    when 'youtube' then p_track_id ~ '^[A-Za-z0-9_-]{11}$'
+    when 'audius'  then p_track_id ~ '^[A-Za-z0-9]{1,32}$'
+    else false
+  end
+$$;
 
 -- ── Playlist ────────────────────────────────────────────────────────────
 create table public.playlists (
@@ -71,14 +83,17 @@ create index playlists_university_idx on public.playlists (updated_at desc) wher
 create table public.playlist_tracks (
   id             uuid primary key default gen_random_uuid(),
   playlist_id    uuid not null references public.playlists (id) on delete cascade,
-  video_id       public.youtube_video_id not null,
+  source         text not null default 'youtube',
+  track_id       text not null,
   title          text not null,
   channel_title  text not null default '',
   thumbnail_url  text not null default '',
+  external_url   text not null default '',
   duration_sec   integer check (duration_sec is null or duration_sec >= 0),
   position       integer not null check (position >= 0),
   added_by       uuid default auth.uid() references public.profiles (id) on delete set null,
-  added_at       timestamptz not null default now()
+  added_at       timestamptz not null default now(),
+  constraint playlist_tracks_valid_track check (public.is_valid_track(source, track_id))
 );
 
 create index playlist_tracks_order_idx on public.playlist_tracks (playlist_id, position, added_at);
@@ -121,13 +136,16 @@ create trigger playlist_tracks_touch
 -- ── Preferiti ───────────────────────────────────────────────────────────
 create table public.favorites (
   user_id        uuid not null default auth.uid() references public.profiles (id) on delete cascade,
-  video_id       public.youtube_video_id not null,
+  source         text not null default 'youtube',
+  track_id       text not null,
   title          text not null,
   channel_title  text not null default '',
   thumbnail_url  text not null default '',
+  external_url   text not null default '',
   duration_sec   integer check (duration_sec is null or duration_sec >= 0),
   created_at     timestamptz not null default now(),
-  primary key (user_id, video_id)
+  primary key (user_id, source, track_id),
+  constraint favorites_valid_track check (public.is_valid_track(source, track_id))
 );
 
 create index favorites_recent_idx on public.favorites (user_id, created_at desc);
@@ -136,12 +154,15 @@ create index favorites_recent_idx on public.favorites (user_id, created_at desc)
 create table public.history (
   id             bigint generated always as identity primary key,
   user_id        uuid not null default auth.uid() references public.profiles (id) on delete cascade,
-  video_id       public.youtube_video_id not null,
+  source         text not null default 'youtube',
+  track_id       text not null,
   title          text not null,
   channel_title  text not null default '',
   thumbnail_url  text not null default '',
+  external_url   text not null default '',
   duration_sec   integer check (duration_sec is null or duration_sec >= 0),
-  played_at      timestamptz not null default now()
+  played_at      timestamptz not null default now(),
+  constraint history_valid_track check (public.is_valid_track(source, track_id))
 );
 
 create index history_recent_idx on public.history (user_id, played_at desc);

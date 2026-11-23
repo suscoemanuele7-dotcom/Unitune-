@@ -112,7 +112,7 @@ export function createHandler(deps: HandlerDeps): (request: Request) => Promise<
     }
 
     // ── Cache condivisa (non consuma né quota Google né tetto utente) ──
-    const cacheKey = `search:v1:${deps.regionCode}:${query}:${pageToken ?? ''}`
+    const cacheKey = `search:v2:${deps.regionCode}:${query}:${pageToken ?? ''}`
     try {
       const hit = await deps.cache.get(cacheKey)
       if (hit) return json(200, { ...hit, cached: true })

@@ -1,7 +1,8 @@
-import type { TrackDTO } from '../supabase/functions/_shared/contract.ts'
+import type { TrackDTO, TrackSource } from '../supabase/functions/_shared/contract.ts'
 
-/** Un brano = metadati di un video YouTube (nessun file audio). */
+/** Un brano = metadati pubblici (YouTube o Audius), nessun file audio. */
 export type Track = TrackDTO
+export type { TrackSource }
 
 export interface PlaylistSummary {
   id: string

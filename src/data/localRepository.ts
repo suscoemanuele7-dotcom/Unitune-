@@ -6,6 +6,7 @@ import { demoUniversityPlaylists } from '../api/fixtures'
 import { isRecord, readJson, writeJson } from '../lib/storage'
 import type { FavoriteEntry, HistoryEntry, PlaylistDetail, PlaylistInput, PlaylistSummary, Track } from '../types'
 import { DataError, type DataRepository } from './repository'
+import { trackKey } from '../../supabase/functions/_shared/contract.ts'
 
 interface StoredPlaylist {
   id: string
@@ -21,21 +22,21 @@ interface StoredPlaylist {
 }
 
 interface LocalDb {
-  version: 1
+  version: 2
   playlists: StoredPlaylist[]
   saves: string[]
   favorites: FavoriteEntry[]
   history: HistoryEntry[]
 }
 
-const DB_KEY = 'unitune.localdb.v1'
+const DB_KEY = 'unitune.localdb.v2'
 const CURATOR_ID = 'demo-ateneo'
 const HISTORY_MAX = 200
 
 function isLocalDb(v: unknown): v is LocalDb {
   return (
     isRecord(v) &&
-    v.version === 1 &&
+    v.version === 2 &&
     Array.isArray(v.playlists) &&
     Array.isArray(v.saves) &&
     Array.isArray(v.favorites) &&
@@ -50,7 +51,7 @@ function uid(): string {
 function seed(): LocalDb {
   const now = new Date().toISOString()
   return {
-    version: 1,
+    version: 2,
     playlists: demoUniversityPlaylists.map((p) => ({
       id: p.id,
       ownerId: CURATOR_ID,
@@ -228,14 +229,14 @@ export class LocalRepository implements DataRepository {
     return this.mutate((db) => {
       db.favorites = [
         { track, createdAt: new Date().toISOString() },
-        ...db.favorites.filter((f) => f.track.videoId !== track.videoId),
+        ...db.favorites.filter((f) => trackKey(f.track) !== trackKey(track)),
       ]
     })
   }
 
-  removeFavorite(videoId: string) {
+  removeFavorite(track: Track) {
     return this.mutate((db) => {
-      db.favorites = db.favorites.filter((f) => f.track.videoId !== videoId)
+      db.favorites = db.favorites.filter((f) => trackKey(f.track) !== trackKey(track))
     })
   }
 

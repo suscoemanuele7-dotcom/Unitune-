@@ -37,7 +37,7 @@ export interface DataRepository {
 
   listFavorites(): Promise<FavoriteEntry[]>
   addFavorite: (track: Track) => Promise<void>
-  removeFavorite: (videoId: string) => Promise<void>
+  removeFavorite: (track: Track) => Promise<void>
 
   listHistory(limit: number): Promise<HistoryEntry[]>
   addHistory: (track: Track) => Promise<void>

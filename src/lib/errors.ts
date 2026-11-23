@@ -1,4 +1,5 @@
 import { YouTubeApiError } from '../api/youtube'
+import { AudiusApiError } from '../api/audius'
 import { DataError } from '../data/repository'
 import { inTime } from './time'
 import { t } from '../i18n'
@@ -16,6 +17,7 @@ export function errorMessage(error: unknown): string {
         return m[error.code]
     }
   }
+  if (error instanceof AudiusApiError) return t.audiusErrors[error.code]
   if (error instanceof DataError) {
     if (error.code === 'offline') return t.common.offlineAction
     if (error.code === 'not_found') return t.playlist.notFound

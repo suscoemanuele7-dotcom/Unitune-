@@ -8,7 +8,7 @@
  * Non c'è nessuno scraping né accesso agli stream: la riproduzione avviene
  * nel client esclusivamente tramite il player IFrame ufficiale.
  */
-import type { ApiErrorCode, TrackDTO } from './contract.ts'
+import { youtubeWatchUrl, type ApiErrorCode, type TrackDTO } from './contract.ts'
 
 const API_BASE = 'https://www.googleapis.com/youtube/v3'
 
@@ -134,11 +134,13 @@ export function parseVideosResponse(body: unknown, order: readonly string[]): Tr
     if (privacy && privacy !== 'public' && privacy !== 'unlisted') continue
     const duration = str(details?.duration)
     byId.set(id, {
-      videoId: id,
+      source: 'youtube',
+      id,
       title: decodeHtmlEntities(str(snippet.title) ?? ''),
       channelTitle: decodeHtmlEntities(str(snippet.channelTitle) ?? ''),
       thumbnailUrl: pickThumbnail(snippet.thumbnails, id),
       durationSec: duration ? parseIsoDuration(duration) : null,
+      externalUrl: youtubeWatchUrl(id),
     })
   }
   return order.flatMap((id) => {

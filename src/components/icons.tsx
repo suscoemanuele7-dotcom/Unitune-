@@ -318,3 +318,21 @@ export function EqualizerIcon({ playing, size = 16 }: { playing: boolean; size?:
     </svg>
   )
 }
+
+/** Luna: brano ascoltabile anche a schermo spento. */
+export function MoonIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z" />
+    </Svg>
+  )
+}
+
+/** Scintilla: Smart Shuffle / brano consigliato. */
+export function SparkleIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path fill="currentColor" d="M12 2.5l2.1 6.4 6.4 2.1-6.4 2.1L12 19.5l-2.1-6.4L3.5 11l6.4-2.1zM19 16l.9 2.1 2.1.9-2.1.9L19 22l-.9-2.1-2.1-.9 2.1-.9z" />
+    </Svg>
+  )
+}

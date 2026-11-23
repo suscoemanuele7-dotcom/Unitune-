@@ -4,14 +4,16 @@ import { recommend, topArtists } from './recommendations'
 
 const NOW = new Date('2026-11-22T12:00:00Z').getTime()
 const tr = (id: string, artist: string): Track => ({
-  videoId: id.padEnd(11, '0'),
+  source: 'youtube',
+  id: id.padEnd(11, '0'),
+  externalUrl: '',
   title: `${artist} - Brano ${id}`,
   channelTitle: artist,
   thumbnailUrl: '',
   durationSec: 200,
 })
 const played = (track: Track, daysAgo: number): HistoryEntry => ({
-  id: `${track.videoId}-${daysAgo}`,
+  id: `${track.id}-${daysAgo}`,
   track,
   playedAt: new Date(NOW - daysAgo * 86_400_000).toISOString(),
 })
@@ -31,9 +33,9 @@ describe('recommend', () => {
     const history = [played(tr('a1', 'Adele'), 0), played(tr('a2', 'Adele'), 1)]
     const pool = [tr('x1', 'Nirvana'), tr('a3', 'Adele'), tr('a1', 'Adele')]
     const result = recommend({ history, favorites: [], pool, now: NOW })
-    expect(result[0]?.videoId).toBe(tr('a3', 'Adele').videoId)
-    expect(result.map((t) => t.videoId)).not.toContain(tr('a1', 'Adele').videoId)
-    expect(result.map((t) => t.videoId)).not.toContain(tr('a2', 'Adele').videoId)
+    expect(result[0]?.id).toBe(tr('a3', 'Adele').id)
+    expect(result.map((t) => t.id)).not.toContain(tr('a1', 'Adele').id)
+    expect(result.map((t) => t.id)).not.toContain(tr('a2', 'Adele').id)
   })
 
   it('senza cronologia (primo avvio) propone comunque il pool, senza duplicati', () => {

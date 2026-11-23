@@ -10,16 +10,22 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { Track } from '../types'
 import type { PlayerErrorCode } from './YouTubePlayer'
+import { findSimilarTracks } from './smartShuffleSource'
+import { toast } from '../ui/useToastStore'
+import { t } from '../i18n'
 import {
   addToEnd,
   currentItem,
   cycleRepeat,
   emptyQueue,
+  injectRecommended,
   insertNext,
   moveItem,
+  nextBackgroundIndex,
   nextIndex,
   previousIndex,
   removeItem,
+  removeRecommended,
   setQueue,
   toggleShuffle,
   type QueueState,
@@ -30,7 +36,7 @@ export type PlaybackErrorCode = PlayerErrorCode | 'offline'
 
 export interface LoadRequest {
   uid: string
-  videoId: string
+  track: Track
   startAt: number
   autoplay: boolean
   token: number
@@ -44,12 +50,16 @@ interface PlayerState {
   queue: QueueState
   /** Da dove è partita la riproduzione (es. nome playlist). */
   contextLabel: string
+  /** Playlist di partenza, se la riproduzione viene da una playlist. */
+  contextPlaylistId: string | null
+  /** Ricerca dei brani simili dello Smart Shuffle in corso. */
+  smartLoading: boolean
   status: PlaybackStatus
   currentTime: number
   duration: number
   volume: number
   muted: boolean
-  error: { code: PlaybackErrorCode; videoId: string } | null
+  error: { code: PlaybackErrorCode; track: Track | null } | null
   /** Il browser ha bloccato l'autoplay: serve un tocco sul player. */
   needsUserGesture: boolean
   /** Player flottante ridotto dall'utente (in pausa). */
@@ -63,7 +73,11 @@ interface PlayerState {
   consecutiveErrors: number
 
   // ── Azioni dell'interfaccia ──
-  playTracks: (tracks: readonly Track[], startIndex?: number, options?: { shuffle?: boolean; context?: string }) => void
+  playTracks: (
+    tracks: readonly Track[],
+    startIndex?: number,
+    options?: { shuffle?: boolean; smart?: boolean; context?: string; playlistId?: string },
+  ) => void
   addToQueue: (track: Track) => void
   playNext: (track: Track) => void
   removeFromQueue: (uid: string) => void
@@ -79,6 +93,8 @@ interface PlayerState {
   setVolume: (volume: number) => void
   toggleMute: () => void
   toggleShuffle: () => void
+  /** Spento → casuale → Smart Shuffle → spento (come nelle app musicali). */
+  cycleShuffle: () => void
   cycleRepeat: () => void
   setFloatingCollapsed: (collapsed: boolean) => void
   dismissError: () => void
@@ -103,6 +119,7 @@ export function willAutoSkip(s: Pick<PlayerState, 'queue' | 'error' | 'consecuti
 }
 
 let token = 0
+let smartAbort: AbortController | null = null
 let skipTimer: ReturnType<typeof setTimeout> | undefined
 const rng = () => Math.random()
 
@@ -126,7 +143,7 @@ export const usePlayerStore = create<PlayerState>()(
             queue: { ...queue, index },
             status: 'error',
             wantsToPlay: false,
-            error: { code: 'offline', videoId: item.track.videoId },
+            error: { code: 'offline', track: item.track },
           })
           return
         }
@@ -139,13 +156,38 @@ export const usePlayerStore = create<PlayerState>()(
           error: null,
           wantsToPlay: autoplay,
           floatingCollapsed: autoplay ? false : get().floatingCollapsed,
-          loadRequest: { uid: item.uid, videoId: item.track.videoId, startAt, autoplay, token },
+          loadRequest: { uid: item.uid, track: item.track, startAt, autoplay, token },
         })
+      }
+
+      /** Cerca brani simili e li inserisce nella coda (Smart Shuffle). */
+      function fillSmart() {
+        smartAbort?.abort()
+        const controller = new AbortController()
+        smartAbort = controller
+        const context = get()
+          .queue.items.filter((i) => !i.recommended)
+          .map((i) => i.track)
+        set({ smartLoading: true })
+        findSimilarTracks(context, controller.signal)
+          .then((recs) => {
+            if (controller.signal.aborted || !get().queue.smart) return
+            if (recs.length === 0) toast(t.player.smartNone)
+            else set({ queue: injectRecommended(get().queue, recs) })
+          })
+          .catch(() => {
+            if (!controller.signal.aborted) toast(t.player.smartNone)
+          })
+          .finally(() => {
+            if (smartAbort === controller) set({ smartLoading: false })
+          })
       }
 
       return {
         queue: emptyQueue,
         contextLabel: '',
+        contextPlaylistId: null,
+        smartLoading: false,
         status: 'idle',
         currentTime: 0,
         duration: 0,
@@ -161,9 +203,18 @@ export const usePlayerStore = create<PlayerState>()(
         consecutiveErrors: 0,
 
         playTracks(tracks, startIndex = 0, options = {}) {
-          const queue = setQueue(get().queue, tracks, startIndex, rng, options.shuffle ?? get().queue.shuffle)
-          set({ contextLabel: options.context ?? '', consecutiveErrors: 0 })
+          smartAbort?.abort()
+          const smart = options.smart ?? (options.shuffle === false ? false : get().queue.smart)
+          const shuffle = smart || (options.shuffle ?? get().queue.shuffle)
+          const queue = { ...setQueue(get().queue, tracks, startIndex, rng, shuffle), smart }
+          set({
+            contextLabel: options.context ?? '',
+            contextPlaylistId: options.playlistId ?? null,
+            consecutiveErrors: 0,
+            smartLoading: false,
+          })
           loadIndex(queue, queue.index, true)
+          if (smart) fillSmart()
         },
 
         addToQueue(track) {
@@ -200,8 +251,11 @@ export const usePlayerStore = create<PlayerState>()(
 
         clearQueue() {
           clearTimeout(skipTimer)
+          smartAbort?.abort()
           set({
-            queue: { ...emptyQueue, shuffle: get().queue.shuffle, repeat: get().queue.repeat },
+            queue: { ...emptyQueue, shuffle: get().queue.shuffle, smart: false, repeat: get().queue.repeat },
+            contextPlaylistId: null,
+            smartLoading: false,
             status: 'idle',
             currentTime: 0,
             duration: 0,
@@ -217,7 +271,7 @@ export const usePlayerStore = create<PlayerState>()(
           const item = currentItem(queue)
           if (!item) return
           if (!isOnline()) {
-            set({ status: 'error', error: { code: 'offline', videoId: item.track.videoId }, wantsToPlay: false })
+            set({ status: 'error', error: { code: 'offline', track: item.track }, wantsToPlay: false })
             return
           }
           if (loadedUid !== item.uid || get().status === 'error') {
@@ -272,7 +326,25 @@ export const usePlayerStore = create<PlayerState>()(
         },
 
         toggleShuffle() {
-          set({ queue: toggleShuffle(get().queue, rng) })
+          const q = get().queue
+          if (q.smart) {
+            smartAbort?.abort()
+            set({ queue: { ...toggleShuffle(removeRecommended(q), rng), smart: false }, smartLoading: false })
+            return
+          }
+          set({ queue: toggleShuffle(q, rng) })
+        },
+
+        cycleShuffle() {
+          const q = get().queue
+          if (!q.shuffle) {
+            set({ queue: toggleShuffle(q, rng) })
+          } else if (!q.smart) {
+            set({ queue: { ...q, smart: true } })
+            fillSmart()
+          } else {
+            get().toggleShuffle()
+          }
         },
 
         cycleRepeat() {
@@ -316,7 +388,10 @@ export const usePlayerStore = create<PlayerState>()(
 
         _onEnded() {
           const q = get().queue
-          const i = nextIndex(q, true)
+          // Schermo spento / app in background: YouTube non può suonare lì,
+          // quindi si passa direttamente al prossimo brano Audius.
+          const hidden = typeof document !== 'undefined' && document.visibilityState === 'hidden'
+          const i = hidden ? nextBackgroundIndex(q) : nextIndex(q, true)
           if (i === null) {
             set({ status: 'ended', wantsToPlay: false })
             return
@@ -330,7 +405,7 @@ export const usePlayerStore = create<PlayerState>()(
           set({
             status: 'error',
             wantsToPlay: false,
-            error: { code, videoId: item?.track.videoId ?? '' },
+            error: { code, track: item?.track ?? null },
             consecutiveErrors: errors,
           })
           // Video non disponibile o non incorporabile: si passa al successivo,
@@ -350,12 +425,14 @@ export const usePlayerStore = create<PlayerState>()(
       }
     },
     {
-      name: 'unitune.player.v1',
+      // v2: brani multi-fonte e Smart Shuffle.
+      name: 'unitune.player.v2',
       storage: createJSONStorage(() => localStorage),
       // Si salva la sessione (coda, posizione, volume), non lo stato "vivo".
       partialize: (s) => ({
         queue: s.queue,
         contextLabel: s.contextLabel,
+        contextPlaylistId: s.contextPlaylistId,
         currentTime: s.currentTime,
         duration: s.duration,
         volume: s.volume,

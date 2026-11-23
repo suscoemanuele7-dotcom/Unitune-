@@ -5,25 +5,30 @@ import {
   currentItem,
   cycleRepeat,
   emptyQueue,
+  injectRecommended,
   insertNext,
   moveItem,
+  nextBackgroundIndex,
   nextIndex,
   previousIndex,
   removeItem,
+  removeRecommended,
   setQueue,
   shuffled,
   toggleShuffle,
   type QueueState,
 } from './queue'
 
-const tr = (n: number): Track => ({
-  videoId: `video${String(n).padStart(6, '0')}`,
+const tr = (n: number, source: Track['source'] = 'youtube'): Track => ({
+  source,
+  id: `video${String(n).padStart(6, '0')}`,
   title: `Brano ${n}`,
   channelTitle: 'Artista',
   thumbnailUrl: '',
   durationSec: 100,
+  externalUrl: '',
 })
-const tracks = [1, 2, 3, 4, 5].map(tr)
+const tracks = [1, 2, 3, 4, 5].map((n) => tr(n))
 const titles = (q: QueueState) => q.items.map((i) => i.track.title)
 
 /** RNG deterministico. */
@@ -132,5 +137,56 @@ describe('modifica della coda', () => {
     expect(moveItem(q, 0, 4).index).toBe(1)
     expect(moveItem(q, 4, 0).index).toBe(3)
     expect(moveItem(q, 9, 0)).toBe(q)
+  })
+})
+
+describe('background', () => {
+  // y = YouTube, a = Audius
+  const mixed = [tr(1, 'youtube'), tr(2, 'audius'), tr(3, 'youtube'), tr(4, 'youtube'), tr(5, 'audius')]
+  it('salta i brani YouTube e va al prossimo Audius', () => {
+    const q = setQueue(emptyQueue, mixed, 1, seeded(1))
+    expect(nextBackgroundIndex(q)).toBe(4)
+  })
+  it('a fine coda: null senza ripetizione, ricomincia con "ripeti tutto"', () => {
+    const q = setQueue(emptyQueue, mixed, 4, seeded(1))
+    expect(nextBackgroundIndex(q)).toBeNull()
+    expect(nextBackgroundIndex({ ...q, repeat: 'all' })).toBe(1)
+  })
+  it('ripeti brano: solo se il corrente è Audius', () => {
+    const q = setQueue(emptyQueue, mixed, 1, seeded(1))
+    expect(nextBackgroundIndex({ ...q, repeat: 'one' })).toBe(1)
+    expect(nextBackgroundIndex({ ...q, index: 0, repeat: 'one' })).toBeNull()
+  })
+  it('nessun brano Audius → null', () => {
+    expect(nextBackgroundIndex(setQueue(emptyQueue, tracks, 0, seeded(1)))).toBeNull()
+  })
+})
+
+describe('Smart Shuffle', () => {
+  const recs = [tr(91), tr(92), tr(93), tr(94)]
+  it('inserisce un consigliato ogni 3 brani, dopo il corrente', () => {
+    const base = setQueue(emptyQueue, [1, 2, 3, 4, 5, 6, 7].map((n) => tr(n)), 0, seeded(1))
+    const q = injectRecommended(base, recs, 3)
+    expect(titles(q)).toEqual(['Brano 1', 'Brano 2', 'Brano 3', 'Brano 91', 'Brano 4', 'Brano 5', 'Brano 6', 'Brano 92', 'Brano 7'])
+    expect(q.items.filter((i) => i.recommended).length).toBe(2)
+    expect(q.index).toBe(0)
+  })
+  it('non duplica brani già in coda', () => {
+    const base = setQueue(emptyQueue, [tr(1), tr(2), tr(3)], 0, seeded(1))
+    const q = injectRecommended(base, [tr(2), tr(91)], 3)
+    expect(titles(q).filter((x) => x === 'Brano 2')).toHaveLength(1)
+    expect(titles(q)).toContain('Brano 91')
+  })
+  it('coda corta: almeno un consigliato in fondo', () => {
+    const q = injectRecommended(setQueue(emptyQueue, [tr(1)], 0, seeded(1)), recs, 3)
+    expect(titles(q)).toEqual(['Brano 1', 'Brano 91'])
+  })
+  it('rimuove i consigliati futuri ma non quello in riproduzione', () => {
+    const base = setQueue(emptyQueue, [1, 2, 3, 4, 5, 6, 7].map((n) => tr(n)), 0, seeded(1))
+    const injected = injectRecommended(base, recs, 3)
+    const playingRec = { ...injected, index: 3 } // "Brano 91"
+    const cleaned = removeRecommended(playingRec)
+    expect(titles(cleaned)).toEqual(['Brano 1', 'Brano 2', 'Brano 3', 'Brano 91', 'Brano 4', 'Brano 5', 'Brano 6', 'Brano 7'])
+    expect(currentItem(cleaned)?.track.title).toBe('Brano 91')
   })
 })

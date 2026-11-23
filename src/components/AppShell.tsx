@@ -22,7 +22,10 @@ export function AppShell() {
   const covered = pathname === '/player' || pathname === '/queue'
   // Con il player flottante visibile serve spazio in fondo per poter
   // scorrere gli ultimi elementi sopra di esso.
-  const floating = usePlayerStore((s) => s.loadedUid !== null && s.queue.index >= 0 && !s.floatingCollapsed)
+  const floating = usePlayerStore((s) => {
+    const current = s.queue.items[s.queue.index]
+    return current !== undefined && current.uid === s.loadedUid && current.track.source === 'youtube' && !s.floatingCollapsed
+  })
 
   // Altezza della zona inferiore → variabile CSS usata dal player flottante.
   useEffect(() => {

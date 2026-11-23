@@ -1,15 +1,25 @@
 import type { Track } from '../types'
+import { youtubeWatchUrl } from '../../supabase/functions/_shared/contract.ts'
 
 /**
- * Catalogo DIMOSTRATIVO usato quando la ricerca reale non è configurata
- * (VITE_USE_MOCKS=true o modalità demo). Contiene solo metadati pubblici di
+ * Catalogo YouTube DIMOSTRATIVO usato quando la ricerca YouTube reale non è
+ * configurata (VITE_USE_MOCKS=true o modalità demo). La ricerca su Audius è
+ * invece sempre reale: la sua API pubblica non richiede chiavi. Contiene solo metadati pubblici di
  * video ufficiali: la riproduzione avviene comunque con il player IFrame
  * ufficiale, quindi rispetta le stesse regole dell'app reale. Se un video
  * venisse rimosso o reso non incorporabile, il player lo segnalerà con
  * l'errore corrispondente (utile anche per provare la gestione errori).
  */
 function t(videoId: string, title: string, channelTitle: string, durationSec: number): Track {
-  return { videoId, title, channelTitle, thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, durationSec }
+  return {
+    source: 'youtube',
+    id: videoId,
+    title,
+    channelTitle,
+    thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    durationSec,
+    externalUrl: youtubeWatchUrl(videoId),
+  }
 }
 
 export const demoCatalog: readonly Track[] = [
@@ -38,7 +48,7 @@ export const demoCatalog: readonly Track[] = [
 
 function pick(...ids: string[]): Track[] {
   return ids.flatMap((id) => {
-    const track = demoCatalog.find((x) => x.videoId === id)
+    const track = demoCatalog.find((x) => x.id === id)
     return track ? [track] : []
   })
 }

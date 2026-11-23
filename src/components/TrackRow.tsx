@@ -5,6 +5,8 @@ import { useTrackMenu, type ExtraAction } from '../ui/useTrackMenu'
 import type { Track } from '../types'
 import { Cover } from './Cover'
 import { EqualizerIcon, MoreIcon } from './icons'
+import { RecommendedBadge, SourceBadge } from './SourceBadge'
+import { trackKey } from '../../supabase/functions/_shared/contract.ts'
 import { t } from '../i18n'
 
 interface TrackRowProps {
@@ -13,11 +15,17 @@ interface TrackRowProps {
   /** Testo secondario alternativo (es. "3 ore fa"). */
   meta?: string
   extraActions?: ExtraAction[]
+  /** Brano inserito dallo Smart Shuffle. */
+  recommended?: boolean
 }
 
-export const TrackRow = memo(function TrackRow({ track, onPlay, meta, extraActions }: TrackRowProps) {
+export const TrackRow = memo(function TrackRow({ track, onPlay, meta, extraActions, recommended }: TrackRowProps) {
   const info = displayInfo(track)
-  const isCurrent = usePlayerStore((s) => s.queue.items[s.queue.index]?.track.videoId === track.videoId)
+  const key = trackKey(track)
+  const isCurrent = usePlayerStore((s) => {
+    const current = s.queue.items[s.queue.index]
+    return current !== undefined && trackKey(current.track) === key
+  })
   const isPlaying = usePlayerStore((s) => s.wantsToPlay)
   const openMenu = useTrackMenu((s) => s.open)
 
@@ -32,9 +40,11 @@ export const TrackRow = memo(function TrackRow({ track, onPlay, meta, extraActio
                 <EqualizerIcon playing={isPlaying} size={13} />
               </span>
             )}
+            {recommended && <RecommendedBadge />}
             {info.title}
           </p>
           <p className="truncate text-[13px] text-muted">
+            <SourceBadge track={track} />
             {info.artist}
             {meta ? ` · ${meta}` : track.durationSec ? ` · ${formatDuration(track.durationSec)}` : ''}
           </p>

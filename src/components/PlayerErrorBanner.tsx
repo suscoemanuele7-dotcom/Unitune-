@@ -18,10 +18,10 @@ export function PlayerErrorBanner({ compact = false }: { compact?: boolean }) {
       <div className="flex-1">
         <p>{message}</p>
         {skipping && <p className="mt-0.5 opacity-80">{t.player.errors.skipping}</p>}
-        {error.code === 'embed_disabled' && error.videoId && (
+        {error.code === 'embed_disabled' && error.track && (
           <a
             className="mt-1 inline-block font-semibold underline"
-            href={`https://www.youtube.com/watch?v=${error.videoId}`}
+            href={error.track.externalUrl}
             target="_blank"
             rel="noopener noreferrer"
           >

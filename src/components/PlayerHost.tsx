@@ -10,8 +10,9 @@
  *                 consentito dalle policy YouTube), spostabile a sinistra o
  *                 a destra; si sposta in alto quando si apre un pannello,
  *                 così non viene mai coperto;
- * - "parked":     fuori schermo, ma SOLO quando non sta riproducendo
- *                 (nessun brano caricato, o player ridotto = in pausa).
+ * - "parked":     fuori schermo, ma SOLO quando YouTube non sta riproducendo
+ *                 (nessun brano YouTube caricato, brano corrente Audius, o
+ *                 player ridotto = in pausa).
  */
 import { useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { usePlayerEngine } from '../player/usePlayerEngine'
@@ -54,7 +55,12 @@ export function PlayerHost() {
   const overlays = usePlayerLayout((s) => s.overlays)
   const side = usePlayerLayout((s) => s.side)
   const setSide = usePlayerLayout((s) => s.setSide)
-  const hasLoadedTrack = usePlayerStore((s) => s.loadedUid !== null && s.queue.index >= 0)
+  // Il riquadro serve solo quando il brano corrente è YouTube (i brani
+  // Audius suonano con <audio> e non hanno bisogno del player video).
+  const hasLoadedTrack = usePlayerStore((s) => {
+    const current = s.queue.items[s.queue.index]
+    return current !== undefined && current.uid === s.loadedUid && current.track.source === 'youtube'
+  })
   const collapsed = usePlayerStore((s) => s.floatingCollapsed)
   const needsGesture = usePlayerStore((s) => s.needsUserGesture)
   const setCollapsed = usePlayerStore((s) => s.setFloatingCollapsed)

@@ -9,6 +9,7 @@ import { Cover } from './Cover'
 import { PlayPauseButton } from './PlayerControls'
 import { PlayerErrorBanner } from './PlayerErrorBanner'
 import { HeartIcon } from './icons'
+import { SourceBadge } from './SourceBadge'
 import { t } from '../i18n'
 
 /** Barra persistente sopra la navigazione; tocco → player a schermo intero. */
@@ -17,7 +18,8 @@ export function MiniPlayer() {
   const navigate = useNavigate()
   const currentTime = usePlayerStore((s) => s.currentTime)
   const duration = usePlayerStore((s) => s.duration)
-  const isFavorite = useIsFavorite(track?.videoId)
+  const status = usePlayerStore((s) => s.status)
+  const isFavorite = useIsFavorite(track)
   const color = useDominantColor(track?.thumbnailUrl)
 
   if (!track) return null
@@ -30,6 +32,7 @@ export function MiniPlayer() {
         <PlayerErrorBanner compact />
       </div>
       <div
+        data-playback-status={status}
         className="relative overflow-hidden rounded-lg shadow-lg"
         style={{ background: `linear-gradient(90deg, ${color}, color-mix(in oklab, ${color} 70%, black))` }}
       >
@@ -45,7 +48,10 @@ export function MiniPlayer() {
             <Cover urls={[track.thumbnailUrl]} className="h-10 w-10" rounded="rounded" />
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold">{info.title}</span>
-              <span className="block truncate text-xs text-white/70">{info.artist}</span>
+              <span className="block truncate text-xs text-white/70">
+                <SourceBadge track={track} />
+                {info.artist}
+              </span>
             </span>
           </button>
           <button

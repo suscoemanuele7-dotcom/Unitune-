@@ -3,15 +3,38 @@
  * Unica fonte di verità: importato sia dal frontend sia dalla funzione.
  */
 
-/** Metadati di un video musicale, come restituiti dalla YouTube Data API v3. */
+/**
+ * Fonti musicali supportate:
+ * - youtube: riproduzione SOLO col player IFrame ufficiale (visibile, primo piano);
+ * - audius:  catalogo aperto con API pubblica che consente lo streaming audio,
+ *            quindi anche in background e con i controlli della schermata di blocco.
+ */
+export type TrackSource = 'youtube' | 'audius'
+
+/** Metadati di un brano (nessun file audio: solo informazioni pubbliche). */
 export interface TrackDTO {
-  /** ID video YouTube (11 caratteri). */
-  videoId: string
+  source: TrackSource
+  /** ID nella fonte: ID video YouTube (11 caratteri) o ID traccia Audius. */
+  id: string
   title: string
+  /** Canale YouTube o nome dell'artista su Audius. */
   channelTitle: string
   thumbnailUrl: string
   /** Durata in secondi; null se non nota. */
   durationSec: number | null
+  /** Pagina del brano sulla fonte originale (attribuzione). */
+  externalUrl: string
+  /** Genere musicale, se la fonte lo fornisce (Audius). */
+  genre?: string
+}
+
+/** Chiave univoca di un brano tra tutte le fonti. */
+export function trackKey(track: Pick<TrackDTO, 'source' | 'id'>): string {
+  return `${track.source}:${track.id}`
+}
+
+export function youtubeWatchUrl(videoId: string): string {
+  return `https://www.youtube.com/watch?v=${videoId}`
 }
 
 export interface SearchRequest {

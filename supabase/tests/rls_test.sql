@@ -22,11 +22,11 @@ set role authenticated;
 select pg_temp.login('11111111-1111-1111-1111-111111111111');
 insert into playlists (id, name, is_public) values ('aaaaaaaa-0000-0000-0000-000000000001', 'Studio', false);
 insert into playlists (id, name, is_public, is_university) values ('aaaaaaaa-0000-0000-0000-000000000002', 'Festa di facoltà', true, true);
-insert into playlist_tracks (playlist_id, video_id, title, position) values
+insert into playlist_tracks (playlist_id, track_id, title, position) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'dQw4w9WgXcQ', 'Brano 1', 0),
   ('aaaaaaaa-0000-0000-0000-000000000002', 'fJ9rUzIMcZQ', 'Brano 2', 0);
-insert into favorites (video_id, title) values ('dQw4w9WgXcQ', 'Brano 1');
-insert into history (video_id, title) values ('dQw4w9WgXcQ', 'Brano 1');
+insert into favorites (track_id, title) values ('dQw4w9WgXcQ', 'Brano 1');
+insert into history (track_id, title) values ('dQw4w9WgXcQ', 'Brano 1');
 select pg_temp.check((select count(*) from playlist_summaries) = 2, 'anna vede le sue 2 playlist');
 select pg_temp.check((select track_count from playlist_summaries where name = 'Studio') = 1, 'la vista conta i brani');
 select pg_temp.check((select cover_urls from playlist_summaries where name = 'Studio') = '{""}', 'la vista restituisce le cover');
@@ -37,9 +37,26 @@ do $$ begin
 exception when check_violation then raise notice 'ok - università deve essere pubblica';
 end $$;
 do $$ begin
-  insert into favorites (video_id, title) values ('non-valido', 'x');
-  raise exception 'TEST FALLITO: video_id non valido accettato';
-exception when check_violation then raise notice 'ok - video_id validato';
+  insert into favorites (track_id, title) values ('non-valido', 'x');
+  raise exception 'TEST FALLITO: track_id non valido accettato';
+exception when check_violation then raise notice 'ok - track_id validato';
+end $$;
+insert into favorites (source, track_id, title) values ('audius', 'V66vyPP', 'Brano Audius');
+select pg_temp.check((select count(*) from favorites) = 2, 'preferiti da fonti diverse (youtube + audius)');
+do $$ begin
+  insert into favorites (source, track_id, title) values ('audius', 'id-con-trattini', 'x');
+  raise exception 'TEST FALLITO: id Audius non valido accettato';
+exception when check_violation then raise notice 'ok - id Audius validato';
+end $$;
+do $$ begin
+  insert into history (source, track_id, title) values ('spotify', 'abc', 'x');
+  raise exception 'TEST FALLITO: fonte sconosciuta accettata';
+exception when check_violation then raise notice 'ok - fonte sconosciuta rifiutata';
+end $$;
+do $$ begin
+  insert into favorites (source, track_id, title) values ('audius', 'V66vyPP', 'doppione');
+  raise exception 'TEST FALLITO: preferito duplicato accettato';
+exception when unique_violation then raise notice 'ok - niente preferiti duplicati';
 end $$;
 
 -- ── Marco: vede solo ciò che è pubblico ──
@@ -57,13 +74,13 @@ select pg_temp.check((select name from playlists where id = 'aaaaaaaa-0000-0000-
 select pg_temp.check((select count(*) from playlist_tracks) = 1, 'marco non può cancellare brani altrui');
 
 do $$ begin
-  insert into playlist_tracks (playlist_id, video_id, title, position)
+  insert into playlist_tracks (playlist_id, track_id, title, position)
   values ('aaaaaaaa-0000-0000-0000-000000000002', 'hTWKbfoikeg', 'intruso', 1);
   raise exception 'TEST FALLITO: marco ha aggiunto brani a una playlist altrui';
 exception when insufficient_privilege then raise notice 'ok - niente inserimenti in playlist altrui';
 end $$;
 do $$ begin
-  insert into favorites (user_id, video_id, title) values ('11111111-1111-1111-1111-111111111111', 'hTWKbfoikeg', 'x');
+  insert into favorites (user_id, track_id, title) values ('11111111-1111-1111-1111-111111111111', 'hTWKbfoikeg', 'x');
   raise exception 'TEST FALLITO: marco ha scritto nei preferiti di anna';
 exception when insufficient_privilege then raise notice 'ok - niente scritture per conto di altri';
 end $$;

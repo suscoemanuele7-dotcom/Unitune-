@@ -2,7 +2,8 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
 import { Cover } from '../components/Cover'
 import { EmptyState } from '../components/common'
-import { ArrowDownIcon, ArrowUpIcon, ChevronLeftIcon, CloseIcon, EqualizerIcon } from '../components/icons'
+import { ArrowDownIcon, ArrowUpIcon, ChevronLeftIcon, CloseIcon, EqualizerIcon, SparkleIcon } from '../components/icons'
+import { RecommendedBadge, SourceBadge } from '../components/SourceBadge'
 import { displayInfo } from '../lib/trackDisplay'
 import { usePlayerStore } from '../player/usePlayerStore'
 import type { QueueItem } from '../player/queue'
@@ -12,6 +13,7 @@ export function QueuePage() {
   const navigate = useNavigate()
   const queue = usePlayerStore((s) => s.queue)
   const wantsToPlay = usePlayerStore((s) => s.wantsToPlay)
+  const smartLoading = usePlayerStore((s) => s.smartLoading)
   const store = usePlayerStore.getState
   const current = queue.items[queue.index]
   const upNext = queue.items.slice(queue.index + 1)
@@ -50,6 +52,12 @@ export function QueuePage() {
           <EmptyState>{t.queue.empty}</EmptyState>
         ) : (
           <>
+            {queue.smart && (
+              <p role="status" className="mb-3 flex items-center gap-2 rounded-lg bg-accent-2/15 px-3 py-2 text-xs">
+                <SparkleIcon size={14} className="text-accent-2" />
+                {smartLoading ? t.player.smartLoading : t.queue.smartActive}
+              </p>
+            )}
             <h2 className="mb-2 mt-2 font-bold">{t.queue.nowPlaying}</h2>
             <Row item={current} active playing={wantsToPlay} />
             {upNext.length > 0 && <h2 className="mb-2 mt-6 font-bold">{t.queue.upNext}</h2>}
@@ -106,9 +114,13 @@ function Row({
         <span className="min-w-0">
           <span className={`flex items-center gap-1.5 truncate text-[15px] font-medium ${active ? 'text-accent' : ''}`}>
             {active && <EqualizerIcon playing={playing} size={13} />}
+            {item.recommended && <RecommendedBadge />}
             <span className="truncate">{info.title}</span>
           </span>
-          <span className="block truncate text-[13px] text-muted">{info.artist}</span>
+          <span className="block truncate text-[13px] text-muted">
+            <SourceBadge track={item.track} />
+            {info.artist}
+          </span>
         </span>
       </button>
       {onUp !== undefined || onDown !== undefined || onRemove ? (

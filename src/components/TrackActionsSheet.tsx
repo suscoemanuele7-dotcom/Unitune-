@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLibraryStore } from '../data/useLibraryStore'
+import { useIsFavorite, useLibraryStore } from '../data/useLibraryStore'
 import { displayInfo } from '../lib/trackDisplay'
 import { usePlayerStore } from '../player/usePlayerStore'
 import { toast } from '../ui/useToastStore'
@@ -19,7 +19,7 @@ export function TrackActionsSheet() {
   const [step, setStep] = useState<'actions' | 'playlists'>('actions')
   const [formOpen, setFormOpen] = useState(false)
 
-  const isFavorite = useLibraryStore((s) => (track ? s.favorites.some((f) => f.track.videoId === track.videoId) : false))
+  const isFavorite = useIsFavorite(track ?? undefined)
   const myPlaylists = useLibraryStore((s) => s.myPlaylists)
 
   const done = () => {
@@ -103,7 +103,7 @@ export function TrackActionsSheet() {
               />
             ))}
             <a
-              href={`https://www.youtube.com/watch?v=${track.videoId}`}
+              href={track.externalUrl}
               target="_blank"
               rel="noopener noreferrer"
               onClick={done}
@@ -112,7 +112,7 @@ export function TrackActionsSheet() {
               <span className="text-muted">
                 <ExternalIcon />
               </span>
-              {t.track.openOnYouTube}
+              {track.source === 'audius' ? t.track.openOnAudius : t.track.openOnYouTube}
             </a>
           </>
         ) : (

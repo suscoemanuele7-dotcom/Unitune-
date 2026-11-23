@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from 'react'
 import { formatDuration } from '../lib/trackDisplay'
 import { usePlayerStore } from '../player/usePlayerStore'
 import { supportsVolumeControl } from '../player/YouTubePlayer'
-import { NextIcon, PauseIcon, PlayIcon, PrevIcon, RepeatIcon, ShuffleIcon, VolumeIcon } from './icons'
+import { NextIcon, PauseIcon, PlayIcon, PrevIcon, RepeatIcon, ShuffleIcon, SparkleIcon, VolumeIcon } from './icons'
 import { t } from '../i18n'
 
 export function SeekBar() {
@@ -75,22 +75,28 @@ export function PlayPauseButton({ size = 'lg' }: { size?: 'lg' | 'sm' }) {
 
 export function TransportControls() {
   const shuffle = usePlayerStore((s) => s.queue.shuffle)
+  const smart = usePlayerStore((s) => s.queue.smart)
+  const smartLoading = usePlayerStore((s) => s.smartLoading)
   const repeat = usePlayerStore((s) => s.queue.repeat)
   const s = usePlayerStore.getState
   const repeatLabel = repeat === 'off' ? t.player.repeatOff : repeat === 'all' ? t.player.repeatAll : t.player.repeatOne
 
   return (
     <div className="flex items-center justify-between">
+      {/* Un tocco: casuale → Smart Shuffle → spento. */}
       <button
         type="button"
         className={`icon-btn relative ${shuffle ? 'text-accent hover:text-accent' : ''}`}
-        aria-label={shuffle ? t.player.shuffleOn : t.player.shuffleOff}
+        aria-label={smart ? t.player.smartOn : shuffle ? t.player.shuffleOn : t.player.shuffleOff}
         aria-pressed={shuffle}
+        aria-busy={smartLoading}
+        title={smart ? t.player.smartOn : shuffle ? t.player.shuffleOn : t.player.shuffleOff}
         onClick={() => {
-          s().toggleShuffle()
+          s().cycleShuffle()
         }}
       >
         <ShuffleIcon />
+        {smart && <SparkleIcon size={12} className={`absolute right-0.5 top-0.5 text-accent-2 ${smartLoading ? 'animate-pulse' : ''}`} />}
         {shuffle && <span className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-accent" />}
       </button>
       <button type="button" className="icon-btn text-text" aria-label={t.player.previous} onClick={() => { s().previous() }}>

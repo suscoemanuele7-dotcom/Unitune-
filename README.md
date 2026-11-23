@@ -1,12 +1,17 @@
 # UniTune
 
-PWA mobile per studenti universitari con un'esperienza d'ascolto "da app musicale" (coda, playlist condivise, player persistente, preferiti, cronologia) costruita **esclusivamente con API e player ufficiali di YouTube**.
+PWA mobile per studenti universitari con un'esperienza d'ascolto "da app musicale" (coda, playlist condivise, player persistente, preferiti, cronologia, **Smart Shuffle**) costruita solo con API ufficiali e legali, su **due fonti musicali**:
+
+| Fonte | Come suona | Schermo spento / app in background |
+|---|---|---|
+| **YouTube** | solo tramite il player IFrame ufficiale, sempre visibile | ❌ si ferma (lo impone YouTube) |
+| **Audius** 🌙 | streaming audio tramite l'API pubblica di Audius | ✅ continua, con i controlli della schermata di blocco |
 
 Progetto accademico · React 19 + Vite + TypeScript strict + Tailwind 4 + Zustand + Supabase + vite-plugin-pwa.
 
-| Home | Ricerca | Player | Playlist |
+| Home | Ricerca (YouTube + Audius) | Player | Smart Shuffle |
 |---|---|---|---|
-| ![Home](docs/screenshots/home.png) | ![Ricerca](docs/screenshots/search.png) | ![Player](docs/screenshots/player.png) | ![Playlist](docs/screenshots/playlist.png) |
+| ![Home](docs/screenshots/home.png) | ![Ricerca](docs/screenshots/search.png) | ![Player](docs/screenshots/player.png) | ![Smart Shuffle](docs/screenshots/smart-shuffle.png) |
 
 <sub>Screenshot generati dal test end-to-end, in cui il player di YouTube è sostituito da un segnaposto e le copertine non vengono caricate.</sub>
 
@@ -15,7 +20,7 @@ Progetto accademico · React 19 + Vite + TypeScript strict + Tailwind 4 + Zustan
 ## Indice
 
 1. [Avvio rapido (modalità demo)](#1-avvio-rapido-modalità-demo)
-2. [Rispetto dei Termini di Servizio di YouTube](#2-rispetto-dei-termini-di-servizio-di-youtube)
+2. [Rispetto dei Termini di Servizio di YouTube](#2-rispetto-dei-termini-di-servizio-di-youtube) · [Audius](#audius-la-seconda-fonte) · [Smart Shuffle](#smart-shuffle)
 3. [Limiti noti e alternative scelte](#3-limiti-noti-e-alternative-scelte)
 4. [Architettura](#4-architettura)
 5. [Configurare Supabase](#5-configurare-supabase)
@@ -40,7 +45,8 @@ npm run dev
 Apri http://localhost:5173. Senza alcuna configurazione l'app parte in **modalità demo**:
 
 - nessun account: i dati (playlist, preferiti, cronologia) restano nel `localStorage` del dispositivo;
-- la ricerca usa un **catalogo dimostrativo** (`src/api/fixtures.ts`) e non consuma quota;
+- la ricerca **YouTube** usa un **catalogo dimostrativo** (`src/api/fixtures.ts`) e non consuma quota;
+- la ricerca **Audius** è già reale: la sua API pubblica non richiede chiavi;
 - la riproduzione usa comunque il **vero player IFrame di YouTube**.
 
 Query speciali nella ricerca demo per provare la gestione errori: `!quota`, `!rete`, `!offline`, `!errore`.
@@ -71,6 +77,26 @@ Riferimenti: [YouTube Terms of Service](https://www.youtube.com/t/terms) · [You
 
 Le soluzioni che riproducono "solo l'audio" di YouTube, o lo fanno in background con un `<audio>` proprio, si basano tutte sull'estrazione dello stream. È vietata dai Termini e fragile, perché YouTube la blocca attivamente. L'IFrame API è l'**unico** modo consentito di riprodurre i contenuti in un'app di terzi. Tutte le scelte di questo progetto derivano da qui, compresi i limiti della sezione 3. Il commento in testa a `src/player/YouTubePlayer.ts` riassume il motivo nel codice.
 
+### Audius, la seconda fonte
+
+L'ascolto in background non è possibile con YouTube (sezione 3). L'alternativa legittima più vicina è una seconda fonte che **consente** lo streaming audio nelle app di terzi: [Audius](https://audius.co), un catalogo musicale aperto con API pubblica e gratuita (`https://api.audius.co/v1`, nessuna chiave; l'app si identifica con `app_name`).
+
+- Ricerca: `/tracks/search`; brani simili: `/tracks/trending?genre=…`; audio: `/tracks/{id}/stream` (redirect al file).
+- Si mostrano solo i brani con `is_streamable=true` e non riservati (`is_stream_gated`).
+- **Attribuzione:** nome dell'artista ed etichetta "Audius" su ogni brano, link "Apri su Audius" / "Brano su Audius".
+- I brani Audius suonano con un elemento `<audio>` (`src/player/backends.ts` → `AudioBackend`), quindi continuano a schermo spento e la Media Session funziona davvero.
+- **Compromesso:** Audius ha soprattutto artisti indipendenti (elettronica, hip hop, lo-fi…), non il catalogo delle grandi case discografiche.
+
+In background, a fine brano, l'app **salta i brani YouTube** della coda e passa al prossimo brano Audius (`nextBackgroundIndex` in `src/player/queue.ts`). Non aggira nulla: semplicemente non prova a riprodurre YouTube dove non è permesso.
+
+### Smart Shuffle
+
+Come nelle app musicali: il pulsante "casuale" ha tre stati (**spento → casuale → Smart Shuffle ✨**). In Smart Shuffle, mentre ascolti una lista in ordine casuale, l'app inserisce **un brano simile ogni 3**, segnato con ✨. Se la lista è una tua playlist, puoi aggiungere il brano consigliato con un tocco.
+
+- "Simile" = stesso artista (peso maggiore), stesso genere (Audius), stessa fonte (`src/lib/smartShuffle.ts`, funzioni pure testate).
+- Candidati, dal più economico (`src/player/smartShuffleSource.ts`): libreria dell'utente → Audius (gratis) → **al massimo 1** ricerca YouTube sull'artista principale, con cache di 12 h (rispetto della quota).
+- Al massimo 2 brani consigliati per artista; disattivandolo, i consigliati non ancora ascoltati spariscono dalla coda.
+
 ### Prima di una pubblicazione reale
 
 - **Informativa privacy dell'app:** le Developer Policies la richiedono a ogni client che usa le API Services. Deve citare l'uso delle YouTube API Services e rimandare a https://policies.google.com/privacy.
@@ -84,8 +110,8 @@ Le soluzioni che riproducono "solo l'audio" di YouTube, o lo fanno in background
 | Desiderio | Perché non è possibile con le API ufficiali | Alternativa adottata | Compromesso |
 |---|---|---|---|
 | Player nascosto (1×1 px) che "suona in sottofondo" | Le policy richiedono un player visibile di almeno 200×200 px e vietano l'ascolto solo audio | **Soluzione A:** il video fa da copertina a schermo intero; altrove c'è un player flottante di 200×200 px, trascinabile a sinistra o a destra e riducibile (ridurlo lo mette in pausa) | Il riquadro occupa spazio: le pagine hanno un margine in fondo per poter scorrere oltre |
-| Riproduzione in background / schermo bloccato | Il browser mette in pausa l'iframe quando l'app va in background. Su YouTube il background è una funzione di YouTube Premium | Nessun aggiramento. L'onboarding lo dice chiaramente | Su mobile l'ascolto avviene con l'app in primo piano |
-| Controlli sulla schermata di blocco (Media Session) | L'audio esce da un iframe di un altro dominio: alcuni browser mostrano i metadati di YouTube o ignorano quelli della pagina | Media Session implementata come miglioramento progressivo (titolo, artista, artwork, play/pausa/avanti/indietro/seek) | Da verificare sul dispositivo: il comportamento dipende dal browser |
+| Riproduzione in background / schermo bloccato | Il browser mette in pausa l'iframe quando l'app va in background. Su YouTube il background è una funzione di YouTube Premium | **Seconda fonte, Audius** 🌙, che si ascolta anche a schermo spento; in background la coda salta i brani YouTube. Nessun aggiramento per YouTube | Audius ha soprattutto artisti indipendenti |
+| Controlli sulla schermata di blocco (Media Session) | Per YouTube l'audio esce da un iframe di un altro dominio: alcuni browser mostrano i metadati di YouTube o ignorano quelli della pagina | Media Session completa per i brani Audius; per YouTube è un miglioramento progressivo | Per YouTube il comportamento dipende dal browser |
 | Volume | Su iOS il volume si controlla solo con i tasti fisici; `setVolume` viene ignorato | Lo slider del volume è nascosto su iOS | — |
 | Autoplay | I browser mobili possono bloccare l'avvio senza un tocco | Evento `onAutoplayBlocked` più un controllo dopo 5 secondi: messaggio "tocca il video per iniziare" (il player è visibile, quindi si può toccare) | Un tocco in più la prima volta |
 | "Brani simili" per i suggerimenti | `relatedToVideoId` è stato rimosso dalla Data API (2023); ogni ricerca costa 100 unità | Suggerimenti calcolati in locale da cronologia e preferiti, più **una** ricerca ogni 12 h sull'artista più ascoltato | Suggerimenti "basici", come da requisito |
@@ -98,9 +124,11 @@ Le soluzioni che riproducono "solo l'audio" di YouTube, o lo fanno in background
 
 ```
 Browser (PWA)
-├─ React UI ── Zustand ─┬─ usePlayerStore (coda, stato, intenzioni) ──► usePlayerEngine ──► YouTubePlayer ──► <iframe youtube.com>
+├─ React UI ── Zustand ─┬─ usePlayerStore (coda, stato, intenzioni) ──► usePlayerEngine ─┬─► YouTubeBackend ──► <iframe youtube.com>
+│                       │                                                                └─► AudioBackend ────► <audio> (stream Audius)
 │                       ├─ useLibraryStore (playlist, preferiti, cronologia; persistito per l'offline)
 │                       └─ useAuthStore
+├─ src/api/audius.ts ───── GET https://api.audius.co/v1 (pubblica, nessuna chiave)
 ├─ src/api/youtube.ts ──── POST /functions/v1/youtube (JWT utente) ──┐
 ├─ Supabase JS (Auth + PostgREST, RLS) ──────────────────────────────┤
 └─ Service worker (solo shell statica)                               │
@@ -117,12 +145,15 @@ Supabase
 src/
 ├─ api/
 │  ├─ youtube.ts          client tipizzato: errori, cache, rate limit, attesa dopo quota esaurita (+ mock)
-│  ├─ client.ts           sceglie client reale o dimostrativo
+│  ├─ audius.ts           client Audius: ricerca, tendenze per genere, URL dello stream
+│  ├─ client.ts           sceglie client YouTube reale o dimostrativo
 │  └─ fixtures.ts         catalogo dimostrativo
 ├─ player/
 │  ├─ YouTubePlayer.ts    wrapper tipizzato sull'IFrame API (+ mappatura errori 2/5/100/101/150/153)
 │  ├─ ytTypes.ts          tipi dell'IFrame API
-│  ├─ queue.ts            logica della coda (funzioni pure, testate)
+│  ├─ backends.ts         motori: YouTubeBackend (IFrame) e AudioBackend (<audio> per Audius)
+│  ├─ queue.ts            logica della coda, Smart Shuffle, scelta del brano in background (funzioni pure, testate)
+│  ├─ smartShuffleSource.ts  raccolta dei brani simili (libreria, Audius, 1 ricerca YouTube)
 │  ├─ usePlayerStore.ts   store Zustand: coda, stato, intenzioni per il motore
 │  ├─ usePlayerEngine.ts  collega lo store all'unico iframe; registra la cronologia (30 s)
 │  ├─ useMediaSession.ts  Media Session API
@@ -292,12 +323,12 @@ Per più quota: [modulo di audit e richiesta di estensione](https://support.goog
 
 | Comando | Cosa verifica |
 |---|---|
-| `npm test` | Unit test (Vitest): coda, client YouTube (MSW), Edge Function (MSW), parsing dei titoli, raccomandazioni |
+| `npm test` | Unit test (Vitest): coda, Smart Shuffle, background, client YouTube e Audius (MSW, con una risposta reale di Audius), Edge Function (MSW), parsing dei titoli, raccomandazioni |
 | `npm run test:db` | Migrazione + **policy RLS** su un Postgres usa e getta (richiede Docker) |
-| `npm run test:e2e` | Test end-to-end su telefono simulato (Playwright): onboarding, ricerca, player flottante ≥ 200×200, schermo intero, coda, errori di embed, preferiti, playlist, cronologia, quota, offline, service worker. Prima volta: `npx playwright install chromium` |
+| `npm run test:e2e` | Test end-to-end su telefono simulato (Playwright): onboarding, ricerca su due fonti, player flottante ≥ 200×200, schermo intero, coda, errori di embed, preferiti, playlist, cronologia, brani Audius con `<audio>`, salto dei brani YouTube a schermo spento, Smart Shuffle, quota, offline, service worker. Prima volta: `npx playwright install chromium` |
 | `npm run check` | typecheck + lint + unit test |
 
-Nel test e2e lo script dell'IFrame API è sostituito da un finto player (`e2e/fake-youtube-iframe-api.js`), solo dentro il test, per non dipendere dalla rete. L'app reale carica sempre lo script ufficiale.
+Nel test e2e lo script dell'IFrame API è sostituito da un finto player (`e2e/fake-youtube-iframe-api.js`) e le risposte di Audius sono simulate, solo dentro il test, per non dipendere dalla rete. L'app reale carica sempre lo script ufficiale e l'API vera di Audius.
 
 **Verifica manuale consigliata su un telefono reale** (non automatizzabile qui): riproduzione con il player vero, comportamento in background e sulla schermata di blocco (sezione 3), installazione PWA.
 
@@ -309,7 +340,9 @@ Nel test e2e lo script dell'IFrame API è sostituito da un finto player (`e2e/fa
 |---|---|---|
 | `VITE_SUPABASE_URL` | client | URL del progetto Supabase. Se manca → modalità demo |
 | `VITE_SUPABASE_ANON_KEY` | client | Chiave pubblica anon/publishable |
-| `VITE_USE_MOCKS` | client | `true` = catalogo dimostrativo, `false` = ricerca reale |
+| `VITE_USE_MOCKS` | client | `true` = catalogo YouTube dimostrativo, `false` = ricerca YouTube reale |
+| `VITE_AUDIUS_API` | client | Opzionale. Base dell'API Audius (default `https://api.audius.co/v1`) |
+| `VITE_AUDIUS_APP_NAME` | client | Opzionale. Nome dell'app comunicato ad Audius (default `UniTune`) |
 | `YOUTUBE_API_KEY` | secret della funzione | Chiave della YouTube Data API v3 (mai nel client) |
 | `ALLOWED_ORIGINS` | secret della funzione | Domini autorizzati (CORS) |
 | `YT_*` | secret della funzione | Opzioni di quota, cache e regione (sezione 7) |

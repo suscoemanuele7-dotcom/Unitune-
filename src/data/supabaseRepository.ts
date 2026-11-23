@@ -7,7 +7,7 @@ import { DataError, type DataRepository } from './repository'
 type SummaryRow = Database['public']['Views']['playlist_summaries']['Row']
 type TrackRow = Pick<
   Database['public']['Tables']['favorites']['Row'],
-  'video_id' | 'title' | 'channel_title' | 'thumbnail_url' | 'duration_sec'
+  'source' | 'track_id' | 'title' | 'channel_title' | 'thumbnail_url' | 'external_url' | 'duration_sec'
 >
 
 function toSummary(r: SummaryRow): PlaylistSummary {
@@ -28,20 +28,24 @@ function toSummary(r: SummaryRow): PlaylistSummary {
 
 function toTrack(r: TrackRow): Track {
   return {
-    videoId: r.video_id,
+    source: r.source,
+    id: r.track_id,
     title: r.title,
     channelTitle: r.channel_title,
     thumbnailUrl: r.thumbnail_url,
     durationSec: r.duration_sec,
+    externalUrl: r.external_url,
   }
 }
 
 function trackColumns(t: Track): TrackRow {
   return {
-    video_id: t.videoId,
+    source: t.source,
+    track_id: t.id,
     title: t.title,
     channel_title: t.channelTitle,
     thumbnail_url: t.thumbnailUrl,
+    external_url: t.externalUrl,
     duration_sec: t.durationSec,
   }
 }
@@ -76,6 +80,8 @@ function checkMaybe<T>(result: { data: T | null; error: PostgrestError | null })
 function checkOk(result: { error: PostgrestError | null }): void {
   if (result.error) throw toDataError(result.error)
 }
+
+const TRACK_COLUMNS = 'source, track_id, title, channel_title, thumbnail_url, external_url, duration_sec'
 
 const SUMMARY_COLUMNS =
   'id, owner_id, name, description, is_public, is_university, created_at, updated_at, owner_name, track_count, cover_urls'
@@ -131,7 +137,7 @@ export class SupabaseRepository implements DataRepository {
       this.db.from('playlist_summaries').select(SUMMARY_COLUMNS).eq('id', id).maybeSingle(),
       this.db
         .from('playlist_tracks')
-        .select('id, video_id, title, channel_title, thumbnail_url, duration_sec, position, added_at')
+        .select(`id, ${TRACK_COLUMNS}, position, added_at`)
         .eq('playlist_id', id)
         .order('position')
         .order('added_at'),
@@ -213,25 +219,32 @@ export class SupabaseRepository implements DataRepository {
     const rows = check(
       await this.db
         .from('favorites')
-        .select('video_id, title, channel_title, thumbnail_url, duration_sec, created_at')
+        .select(`${TRACK_COLUMNS}, created_at`)
         .order('created_at', { ascending: false }),
     )
     return rows.map((r) => ({ track: toTrack(r), createdAt: r.created_at }))
   }
 
   async addFavorite(track: Track) {
-    checkOk(await this.db.from('favorites').upsert(trackColumns(track), { onConflict: 'user_id,video_id' }))
+    checkOk(await this.db.from('favorites').upsert(trackColumns(track), { onConflict: 'user_id,source,track_id' }))
   }
 
-  async removeFavorite(videoId: string) {
-    checkOk(await this.db.from('favorites').delete().eq('user_id', this.userId).eq('video_id', videoId))
+  async removeFavorite(track: Track) {
+    checkOk(
+      await this.db
+        .from('favorites')
+        .delete()
+        .eq('user_id', this.userId)
+        .eq('source', track.source)
+        .eq('track_id', track.id),
+    )
   }
 
   async listHistory(limit: number): Promise<HistoryEntry[]> {
     const rows = check(
       await this.db
         .from('history')
-        .select('id, video_id, title, channel_title, thumbnail_url, duration_sec, played_at')
+        .select(`id, ${TRACK_COLUMNS}, played_at`)
         .order('played_at', { ascending: false })
         .limit(limit),
     )

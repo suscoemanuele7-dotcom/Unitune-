@@ -17,6 +17,7 @@ import {
   SchoolIcon,
   ShareIcon,
   ShuffleIcon,
+  SparkleIcon,
   TrashIcon,
 } from '../components/icons'
 import { useLibraryStore } from '../data/useLibraryStore'
@@ -178,10 +179,21 @@ export function PlaylistPage() {
           <>
             <button
               type="button"
+              className="icon-btn text-accent-2 hover:text-accent-2"
+              aria-label={t.playlist.smartShuffle}
+              title={t.playlist.smartShuffle}
+              onClick={() => {
+                playTracks(tracks, Math.floor(Math.random() * tracks.length), { smart: true, context, playlistId: summary.id })
+              }}
+            >
+              <SparkleIcon />
+            </button>
+            <button
+              type="button"
               className="icon-btn"
               aria-label={t.playlist.shuffle}
               onClick={() => {
-                playTracks(tracks, Math.floor(Math.random() * tracks.length), { shuffle: true, context })
+                playTracks(tracks, Math.floor(Math.random() * tracks.length), { shuffle: true, smart: false, context, playlistId: summary.id })
               }}
             >
               <ShuffleIcon />
@@ -191,7 +203,7 @@ export function PlaylistPage() {
               aria-label={t.playlist.play}
               className="flex h-12 w-12 items-center justify-center rounded-full bg-accent text-white shadow-lg active:scale-95"
               onClick={() => {
-                playTracks(tracks, 0, { shuffle: false, context })
+                playTracks(tracks, 0, { shuffle: false, context, playlistId: summary.id })
               }}
             >
               <PlayIcon />
@@ -208,7 +220,7 @@ export function PlaylistPage() {
             key={entry.entryId}
             track={entry.track}
             onPlay={() => {
-              playTracks(tracks, i, { context })
+              playTracks(tracks, i, { context, playlistId: summary.id })
             }}
             extraActions={
               isOwner

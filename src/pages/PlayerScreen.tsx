@@ -3,7 +3,9 @@ import { useCallback } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router'
 import { PlayerErrorBanner } from '../components/PlayerErrorBanner'
 import { SeekBar, TransportControls, VolumeControl } from '../components/PlayerControls'
-import { ChevronDownIcon, ExternalIcon, HeartIcon, MoreIcon, QueueIcon } from '../components/icons'
+import { ChevronDownIcon, ExternalIcon, HeartIcon, MoonIcon, MoreIcon, PlusIcon, QueueIcon, SparkleIcon } from '../components/icons'
+import { Cover } from '../components/Cover'
+import { SourceBadge } from '../components/SourceBadge'
 import { useIsFavorite, useLibraryStore } from '../data/useLibraryStore'
 import { useDominantColor } from '../hooks/useDominantColor'
 import { errorMessage } from '../lib/errors'
@@ -15,16 +17,23 @@ import { useTrackMenu } from '../ui/useTrackMenu'
 import { t } from '../i18n'
 
 /**
- * Player a schermo intero. Il riquadro quadrato al centro è lo "slot" su cui
- * PlayerHost posiziona l'iframe di YouTube: il video fa da copertina ed è
- * sempre visibile (≥ 200×200 px) mentre suona.
+ * Player a schermo intero.
+ * - Brano YouTube: il riquadro quadrato al centro è lo "slot" su cui
+ *   PlayerHost posiziona l'iframe: il video fa da copertina ed è sempre
+ *   visibile (≥ 200×200 px) mentre suona.
+ * - Brano Audius: copertina vera; l'audio continua anche a schermo spento.
  */
 export function PlayerScreen() {
   const track = useCurrentTrack()
   const navigate = useNavigate()
   const contextLabel = usePlayerStore((s) => s.contextLabel)
   const needsGesture = usePlayerStore((s) => s.needsUserGesture)
-  const isFavorite = useIsFavorite(track?.videoId)
+  const isFavorite = useIsFavorite(track)
+  const recommended = usePlayerStore((s) => s.queue.items[s.queue.index]?.recommended === true)
+  const contextPlaylistId = usePlayerStore((s) => s.contextPlaylistId)
+  const contextPlaylist = useLibraryStore((s) =>
+    contextPlaylistId ? s.myPlaylists.find((p) => p.id === contextPlaylistId) : undefined,
+  )
   const color = useDominantColor(track?.thumbnailUrl)
   const setSlot = usePlayerLayout((s) => s.setFullscreenSlot)
   const openMenu = useTrackMenu((s) => s.open)
@@ -76,19 +85,61 @@ export function PlayerScreen() {
         </header>
 
         <div className="flex flex-1 flex-col justify-center gap-3 py-4">
-          <div
-            ref={slotRef}
-            className="mx-auto aspect-square w-full min-w-[200px] max-w-[min(100%,46dvh)] overflow-hidden rounded-lg bg-black shadow-2xl"
-          />
-          {needsGesture && <p className="text-center text-xs text-white/80">{t.player.tapToStart}</p>}
+          {track.source === 'youtube' ? (
+            <div
+              ref={slotRef}
+              className="mx-auto aspect-square w-full min-w-[200px] max-w-[min(100%,46dvh)] overflow-hidden rounded-lg bg-black shadow-2xl"
+            />
+          ) : (
+            <Cover
+              urls={[track.thumbnailUrl]}
+              alt=""
+              className="mx-auto aspect-square w-full max-w-[min(100%,46dvh)] shadow-2xl"
+              rounded="rounded-lg"
+            />
+          )}
+          {needsGesture && (
+            <p className="text-center text-xs text-white/80">
+              {track.source === 'youtube' ? t.player.tapToStart : t.player.tapToPlay}
+            </p>
+          )}
         </div>
 
         <div className="space-y-5">
           <PlayerErrorBanner />
+          {recommended && (
+            <div className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs">
+              <SparkleIcon size={14} className="shrink-0 text-accent-2" />
+              <span className="flex-1">{t.player.recommended}</span>
+              {contextPlaylist && (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-full bg-text px-3 py-1 font-semibold text-bg"
+                  onClick={() => {
+                    useLibraryStore
+                      .getState()
+                      .addToPlaylist(contextPlaylist.id, track)
+                      .then(() => {
+                        toast(t.playlist.addedTo(contextPlaylist.name))
+                      })
+                      .catch((error: unknown) => {
+                        toast(errorMessage(error), 'error')
+                      })
+                  }}
+                >
+                  <PlusIcon size={14} />
+                  {t.player.addRecommendedTo(contextPlaylist.name)}
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-xl font-bold">{info.title}</h1>
-              <p className="truncate text-white/70">{info.artist}</p>
+              <p className="truncate text-white/70">
+                <SourceBadge track={track} />
+                {info.artist}
+              </p>
             </div>
             <button
               type="button"
@@ -117,17 +168,24 @@ export function PlayerScreen() {
               <QueueIcon />
             </Link>
           </div>
-          <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-white/50">
-            {t.player.officialPlayerNote}
-            <a
-              href={`https://www.youtube.com/watch?v=${track.videoId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-0.5 underline"
-            >
-              YouTube <ExternalIcon size={11} />
-            </a>
-          </p>
+          {track.source === 'youtube' ? (
+            <div className="space-y-1 text-center text-[11px] text-white/50">
+              <p className="flex items-center justify-center gap-1.5">
+                {t.player.officialPlayerNote}
+                <a href={track.externalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
+                  YouTube <ExternalIcon size={11} />
+                </a>
+              </p>
+              <p>{t.player.youtubeBackgroundNote}</p>
+            </div>
+          ) : (
+            <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-white/60">
+              <MoonIcon size={11} /> {t.player.background} ·
+              <a href={track.externalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">
+                {t.player.audiusAttribution} <ExternalIcon size={11} />
+              </a>
+            </p>
+          )}
         </div>
       </div>
     </div>,

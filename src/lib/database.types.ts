@@ -7,10 +7,12 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 type TrackColumns = {
-  video_id: string
+  source: 'youtube' | 'audius'
+  track_id: string
   title: string
   channel_title: string
   thumbnail_url: string
+  external_url: string
   duration_sec: number | null
 }
 
@@ -48,7 +50,7 @@ export type Database = {
       playlist_tracks: {
         Row: TrackColumns & { id: string; playlist_id: string; position: number; added_by: string | null; added_at: string }
         Insert: Partial<TrackColumns> &
-          Pick<TrackColumns, 'video_id' | 'title'> & { playlist_id: string; position: number }
+          Pick<TrackColumns, 'track_id' | 'title'> & { playlist_id: string; position: number }
         Update: { position?: number }
         Relationships: []
       }
@@ -60,13 +62,13 @@ export type Database = {
       }
       favorites: {
         Row: TrackColumns & { user_id: string; created_at: string }
-        Insert: Partial<TrackColumns> & Pick<TrackColumns, 'video_id' | 'title'> & { user_id?: string }
+        Insert: Partial<TrackColumns> & Pick<TrackColumns, 'track_id' | 'title'> & { user_id?: string }
         Update: Record<string, never>
         Relationships: []
       }
       history: {
         Row: TrackColumns & { id: number; user_id: string; played_at: string }
-        Insert: Partial<TrackColumns> & Pick<TrackColumns, 'video_id' | 'title'> & { user_id?: string }
+        Insert: Partial<TrackColumns> & Pick<TrackColumns, 'track_id' | 'title'> & { user_id?: string }
         Update: Record<string, never>
         Relationships: []
       }

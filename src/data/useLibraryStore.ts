@@ -8,6 +8,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
+import { trackKey } from '../../supabase/functions/_shared/contract.ts'
 import type { AppUser } from '../auth/useAuthStore'
 import type {
   FavoriteEntry,
@@ -164,16 +165,17 @@ export const useLibraryStore = create<LibraryState>()(
         },
 
         async toggleFavorite(track) {
-          const isFav = get().favorites.some((f) => f.track.videoId === track.videoId)
+          const key = trackKey(track)
+          const isFav = get().favorites.some((f) => trackKey(f.track) === key)
           await write(
             () => {
               set({
                 favorites: isFav
-                  ? get().favorites.filter((f) => f.track.videoId !== track.videoId)
+                  ? get().favorites.filter((f) => trackKey(f.track) !== key)
                   : [{ track, createdAt: new Date().toISOString() }, ...get().favorites],
               })
             },
-            () => (isFav ? repository().removeFavorite(track.videoId) : repository().addFavorite(track)),
+            () => (isFav ? repository().removeFavorite(track) : repository().addFavorite(track)),
           )
           return !isFav
         },
@@ -264,7 +266,8 @@ export const useLibraryStore = create<LibraryState>()(
       }
     },
     {
-      name: 'unitune.library.v1',
+      // v2: brani multi-fonte (source + id). I dati v1 della demo vengono ignorati.
+      name: 'unitune.library.v2',
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({
         ownerId: s.ownerId,
@@ -280,6 +283,7 @@ export const useLibraryStore = create<LibraryState>()(
   ),
 )
 
-export function useIsFavorite(videoId: string | undefined): boolean {
-  return useLibraryStore((s) => videoId !== undefined && s.favorites.some((f) => f.track.videoId === videoId))
+export function useIsFavorite(track: Track | undefined): boolean {
+  const key = track ? trackKey(track) : null
+  return useLibraryStore((s) => key !== null && s.favorites.some((f) => trackKey(f.track) === key))
 }

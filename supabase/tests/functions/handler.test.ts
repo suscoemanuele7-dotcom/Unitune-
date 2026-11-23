@@ -100,11 +100,13 @@ describe('handler youtube', () => {
     expect(body).toEqual({
       items: [
         {
-          videoId: 'dQw4w9WgXcQ',
+          source: 'youtube',
+          id: 'dQw4w9WgXcQ',
           title: 'Never Gonna Give You Up',
           channelTitle: 'Rick Astley',
           thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
           durationSec: 213,
+          externalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         },
       ],
       nextPageToken: 'P2',

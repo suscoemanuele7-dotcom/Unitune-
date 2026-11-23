@@ -13,6 +13,7 @@ import { greeting } from '../lib/time'
 import { usePlayerStore } from '../player/usePlayerStore'
 import type { Track } from '../types'
 import { t } from '../i18n'
+import { trackKey } from '../../supabase/functions/_shared/contract.ts'
 
 export function HomePage() {
   const history = useLibraryStore((s) => s.history)
@@ -24,8 +25,8 @@ export function HomePage() {
     const seen = new Set<string>()
     const out: Track[] = []
     for (const h of history) {
-      if (seen.has(h.track.videoId)) continue
-      seen.add(h.track.videoId)
+      if (seen.has(trackKey(h.track))) continue
+      seen.add(trackKey(h.track))
       out.push(h.track)
       if (out.length === 10) break
     }
@@ -54,7 +55,7 @@ export function HomePage() {
           <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-1">
             {recent.map((track, i) => (
               <RecentCard
-                key={track.videoId}
+                key={trackKey(track)}
                 track={track}
                 onPlay={() => {
                   playTracks(recent, i, { context: t.home.recent })
@@ -100,7 +101,7 @@ export function HomePage() {
           <div>
             {recommendations.slice(0, 8).map((track, i) => (
               <TrackRow
-                key={track.videoId}
+                key={trackKey(track)}
                 track={track}
                 onPlay={() => {
                   playTracks(recommendations, i, { context: t.home.forYou })
